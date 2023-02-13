@@ -22,7 +22,7 @@ export class MoviesController {
 
   //nest.js는 express, fastify 위에서 작동, req와 res를 많이 사용안하는 것이 좋다.
   @Get()
-  getAll(@Req() req, @Res() res): Movie[] {
+  getAll(): Movie[] {
     return this.moviesService.getAll();
   }
 
