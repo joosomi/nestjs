@@ -13,6 +13,8 @@ import { UserResponseInterface } from '@app/user/userResponse.interface';
 import { LoginUserDto } from '@app/user/dto/loginUser.dto';
 import { Request } from 'express';
 import { ExpressRequest } from './types/expressRequest.interface';
+import { User } from '@app/user/decorators/user.decorator';
+import { UserEntity } from './user.entity';
 
 @Controller()
 export class UserController {
@@ -41,9 +43,13 @@ export class UserController {
   //Middleware
   @Get('user')
   async currentUser(
-    @Req() request: ExpressRequest,
+    @User() user: UserEntity,
+    //@User('id') user: UserEntity, //user decorator
   ): Promise<UserResponseInterface> {
-    console.log('current user in controller', request.user);
-    return this.userService.buildUserResponse(request.user);
+    // console.log('request', request);
+
+    console.log('user', user);
+    // console.log('current user in controller', request.user);
+    return this.userService.buildUserResponse(user);
   }
 }
