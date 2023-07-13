@@ -5,7 +5,7 @@ import { CreateUserDto } from '@app/user/dto/createUser.dto';
 import { UserEntity } from '@app/user/user.entity';
 import { sign } from 'jsonwebtoken';
 import { JWT_SECRET } from '@app/config';
-import { UserResponseInterface } from '@app/user/types/userResponse.interface';
+import { UserResponseInterface } from '@app/user/userResponse.interface';
 import { LoginUserDto } from '@app/user/dto/loginUser.dto';
 import { compare } from 'bcrypt';
 
@@ -36,6 +36,10 @@ export class UserServie {
     Object.assign(newUser, createUserDto);
     console.log('newUser', newUser);
     return await this.userRepository.save(newUser);
+  }
+
+  async findById(id: number): Promise<UserEntity> {
+    return this.userRepository.findOne({ where: { id } });
   }
 
   async login(loginUserDto: LoginUserDto): Promise<UserEntity> {
