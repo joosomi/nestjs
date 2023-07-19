@@ -8,7 +8,7 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { UserServie } from '@app/user/user.service';
+import { UserService } from '@app/user/user.service';
 import { CreateUserDto } from '@app/user/dto/createUser.dto';
 import { UserResponseInterface } from '@app/user/userResponse.interface';
 import { LoginUserDto } from '@app/user/dto/loginUser.dto';
@@ -21,7 +21,7 @@ import { UpdateUserDto } from './dto/updateUser.dto';
 
 @Controller()
 export class UserController {
-  constructor(private readonly userService: UserServie) {}
+  constructor(private readonly userService: UserService) {}
 
   //Register - createUser
   @Post('users')

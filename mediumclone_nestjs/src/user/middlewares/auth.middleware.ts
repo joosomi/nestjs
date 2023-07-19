@@ -3,14 +3,14 @@ import { NextFunction, Response } from 'express';
 import { ExpressRequest } from '@app/user/types/expressRequest.interface';
 import { verify } from 'jsonwebtoken';
 import { JWT_SECRET } from '@app/config';
-import { UserServie } from '@app/user/user.service';
+import { UserService } from '@app/user/user.service';
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
-  constructor(private readonly userService: UserServie) {}
+  constructor(private readonly userService: UserService) {}
 
   async use(req: ExpressRequest, _: Response, next: NextFunction) {
-    console.log('authMiddle', req.headers);
+    // console.log('authMiddle', req.headers);
 
     if (!req.headers.authorization) {
       req.user = null;
