@@ -3,7 +3,8 @@ import {
   Controller,
   Get,
   Post,
-  Req,
+  Put,
+  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -12,14 +13,17 @@ import { CreateUserDto } from '@app/user/dto/createUser.dto';
 import { UserResponseInterface } from '@app/user/userResponse.interface';
 import { LoginUserDto } from '@app/user/dto/loginUser.dto';
 import { Request } from 'express';
-import { ExpressRequest } from './types/expressRequest.interface';
+import { ExpressRequest } from '@app/user/types/expressRequest.interface';
 import { User } from '@app/user/decorators/user.decorator';
-import { UserEntity } from './user.entity';
+import { UserEntity } from '@app/user/user.entity';
+import { AuthGuard } from '@app/user/guards/auth.guard';
+import { UpdateUserDto } from './dto/updateUser.dto';
 
 @Controller()
 export class UserController {
   constructor(private readonly userService: UserServie) {}
 
+  //Register - createUser
   @Post('users')
   @UsePipes(new ValidationPipe()) // pipe - 데이터 유효성 검사
   async createUser(
@@ -28,7 +32,7 @@ export class UserController {
     const user = await this.userService.createUser(createUserDto);
     return this.userService.buildUserResponse(user);
   }
-  //login
+  //Login
   @Post('users/login')
   @UsePipes(new ValidationPipe())
   async login(
@@ -40,16 +44,26 @@ export class UserController {
     return this.userService.buildUserResponse(user);
   }
 
+  //GET - currentUser
   //Middleware
   @Get('user')
-  async currentUser(
-    @User() user: UserEntity,
-    //@User('id') user: UserEntity, //user decorator
-  ): Promise<UserResponseInterface> {
-    // console.log('request', request);
-
+  @UseGuards(AuthGuard) //UseGuards - protect routes
+  async currentUser(@User() user: UserEntity): Promise<UserResponseInterface> {
     console.log('user', user);
-    // console.log('current user in controller', request.user);
+    return this.userService.buildUserResponse(user);
+  }
+
+  //UPDATE
+  @Put('user')
+  @UseGuards(AuthGuard)
+  async updateCurrentUser(
+    @User('id') currentUserId: number,
+    @Body('user') updateUserDto: UpdateUserDto,
+  ): Promise<UserResponseInterface> {
+    const user = await this.userService.updateUser(
+      currentUserId,
+      updateUserDto,
+    );
     return this.userService.buildUserResponse(user);
   }
 }
