@@ -1,19 +1,69 @@
 import { UserEntity } from '@app/user/user.entity';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeleteResult, Repository } from 'typeorm';
+import { DataSource, DeleteResult, getRepository, Repository } from 'typeorm';
 import { ArticleEntity } from './article.entity';
 import { CreateArticleDto } from './dto/createArticle.dto';
 import { ArticleResponseInterface } from './types/articleResponse.interface';
 import slugify from 'slugify';
+import { ArticlesResponseInterface } from './types/articlesResponse.interface';
 
 @Injectable()
 export class ArticleService {
   constructor(
     @InjectRepository(ArticleEntity)
     private readonly articleRepository: Repository<ArticleEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {}
 
+  //GET
+  async findAll(
+    currentUserId: number,
+    query: any,
+  ): Promise<ArticlesResponseInterface> {
+    const queryBuilder = this.articleRepository
+      .createQueryBuilder('articles')
+      .leftJoinAndSelect('articles.author', 'author');
+
+    if (query.tag) {
+      queryBuilder.andWhere('articles.tagList LIKE :tag', {
+        tag: `%${query.tag}%`,
+      });
+    }
+    //tagList는 string
+
+    if (query.author) {
+      const author = await this.userRepository.findOne({
+        where: {
+          username: query.author,
+        },
+      });
+
+      queryBuilder.andWhere('articles.authorId = :id', {
+        id: author.id,
+      });
+    }
+
+    //최신순으로 정렬
+    queryBuilder.orderBy('articles.createdAt', 'DESC');
+
+    const articlesCount = await queryBuilder.getCount();
+
+    if (query.limit) {
+      queryBuilder.limit(query.limit);
+    }
+
+    if (query.offset) {
+      queryBuilder.offset(query.offset);
+    }
+
+    const articles = await queryBuilder.getMany();
+
+    return { articles, articlesCount };
+  }
+
+  //POST
   async createArticle(
     currentUser: UserEntity,
     createArticleDto: CreateArticleDto,
@@ -47,6 +97,27 @@ export class ArticleService {
     }
 
     return await this.articleRepository.delete({ slug });
+  }
+
+  //UPDATE
+  async updateArticle(
+    slug: string,
+    updateArticleDto: CreateArticleDto,
+    currentUserId: number,
+  ): Promise<ArticleEntity> {
+    const article = await this.findBySlug(slug);
+
+    if (!article) {
+      throw new HttpException('Article does not exist', HttpStatus.NOT_FOUND);
+    }
+
+    if (article.author.id !== currentUserId) {
+      throw new HttpException('You are not an author', HttpStatus.FORBIDDEN);
+    }
+
+    Object.assign(article, updateArticleDto);
+
+    return await this.articleRepository.save(article);
   }
 
   async findBySlug(slug: string): Promise<ArticleEntity> {

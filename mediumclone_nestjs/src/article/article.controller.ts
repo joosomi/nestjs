@@ -7,16 +7,31 @@ import {
   Get,
   Param,
   Post,
+  Put,
+  Query,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { AuthGuard } from '@app/user/guards/auth.guard';
 import { ArticleService } from '@app/article/article.service';
 import { CreateArticleDto } from '@app/article/dto/createArticle.dto';
 import { ArticleResponseInterface } from './types/articleResponse.interface';
+import { ArticlesResponseInterface } from './types/articlesResponse.interface';
 
 @Controller('articles')
 export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
+
+  //GET - findAll
+  @Get()
+  async findAll(
+    @User('id') cuurentUserId: number,
+    @Query() query: any,
+  ): Promise<ArticlesResponseInterface> {
+    return await this.articleService.findAll(cuurentUserId, query);
+  }
+
   //POST
   @Post()
   @UseGuards(AuthGuard)
@@ -48,5 +63,23 @@ export class ArticleController {
     @Param('slug') slug: string,
   ) {
     return await this.articleService.deleteArticle(slug, currentUserId);
+  }
+
+  //Update Article
+  //PUT /api/articles/:slug
+  @Put(':slug')
+  @UseGuards(AuthGuard)
+  @UsePipes(new ValidationPipe()) //자동으로 요청 데이터의 유효성 검증
+  async updateArticle(
+    @User('id') currentUserId: number,
+    @Param('slug') slug: string,
+    @Body('article') updateArticleDto: CreateArticleDto,
+  ) {
+    const article = await this.articleService.updateArticle(
+      slug,
+      updateArticleDto,
+      currentUserId,
+    );
+    return await this.articleService.buildArticleResponse(article);
   }
 }
