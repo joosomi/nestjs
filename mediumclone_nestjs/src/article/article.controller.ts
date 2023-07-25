@@ -23,6 +23,17 @@ import { ArticlesResponseInterface } from './types/articlesResponse.interface';
 export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
+  //Feed Articles
+  //GET /api/articles/feed
+  @Get('feed')
+  @UseGuards(AuthGuard)
+  async getFeed(
+    @User('id') currentUserId: number,
+    @Query() query: any,
+  ): Promise<ArticlesResponseInterface> {
+    return await this.articleService.getFeed(currentUserId, query);
+  }
+
   //GET - findAll
   @Get()
   async findAll(

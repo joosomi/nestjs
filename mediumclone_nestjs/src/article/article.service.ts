@@ -1,20 +1,24 @@
 import { UserEntity } from '@app/user/user.entity';
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DeleteResult, Repository } from 'typeorm';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { getRepositoryToken, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, DeleteResult, Repository } from 'typeorm';
 import { ArticleEntity } from './article.entity';
 import { CreateArticleDto } from './dto/createArticle.dto';
 import { ArticleResponseInterface } from './types/articleResponse.interface';
 import slugify from 'slugify';
 import { ArticlesResponseInterface } from './types/articlesResponse.interface';
+import { FollowEntity } from '@app/profile/follow.entity';
 
 @Injectable()
 export class ArticleService {
   constructor(
+    private readonly dataSource: DataSource,
     @InjectRepository(ArticleEntity)
     private readonly articleRepository: Repository<ArticleEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(FollowEntity)
+    private readonly followRepository: Repository<FollowEntity>,
   ) {}
 
   //GET Articles
@@ -22,7 +26,8 @@ export class ArticleService {
     currentUserId: number,
     query: any,
   ): Promise<ArticlesResponseInterface> {
-    const queryBuilder = this.articleRepository
+    const queryBuilder = this.dataSource
+      .getRepository(ArticleEntity)
       .createQueryBuilder('articles')
       .leftJoinAndSelect('articles.author', 'author'); //articles와 author 테이블 JOIN
 
@@ -96,8 +101,51 @@ export class ArticleService {
       const favorited = favoriteIds.includes(article.id);
       return { ...article, favorited };
     });
+    // queryBuilder.getMany()를 통해 기사들을 가져온 후
+    // 각 기사의 favorited 필드를 계산하여 새로운 배열 articlesWithFavorited을 생성
 
     return { articles: articlesWithFavorited, articlesCount };
+  }
+
+  //GET Feed
+  async getFeed(
+    currentUserId: number,
+    query: any,
+  ): Promise<ArticlesResponseInterface> {
+    const follows = await this.followRepository.find({
+      where: {
+        followerId: currentUserId,
+      },
+    }); //find : array 반환
+
+    //아무도 팔로우하고 있지 않은 겨웅
+    if (follows.length === 0) {
+      return { articles: [], articlesCount: 0 };
+    }
+
+    const followingUserIds = follows.map((follow) => follow.followingId);
+    const queryBuilder = this.dataSource
+      .getRepository(ArticleEntity)
+      .createQueryBuilder('articles')
+      .leftJoinAndSelect('articles.author', 'author')
+      .where('articles.authorId IN (:...ids)', { ids: followingUserIds });
+
+    //sorting
+    queryBuilder.orderBy('articles.createdAt', 'DESC');
+
+    const articlesCount = await queryBuilder.getCount();
+
+    if (query.limit) {
+      queryBuilder.limit(query.limit);
+    }
+
+    if (query.offset) {
+      queryBuilder.offset(query.offset);
+    }
+
+    const articles = await queryBuilder.getMany();
+
+    return { articles, articlesCount };
   }
 
   //POST
