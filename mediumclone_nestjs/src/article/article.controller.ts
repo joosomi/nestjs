@@ -11,13 +11,13 @@ import {
   Query,
   UseGuards,
   UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
 import { AuthGuard } from '@app/user/guards/auth.guard';
 import { ArticleService } from '@app/article/article.service';
 import { CreateArticleDto } from '@app/article/dto/createArticle.dto';
 import { ArticleResponseInterface } from './types/articleResponse.interface';
 import { ArticlesResponseInterface } from './types/articlesResponse.interface';
+import { BackendValidationPipe } from '@app/shared/pipes/backendValidation';
 
 @Controller('articles')
 export class ArticleController {
@@ -46,6 +46,7 @@ export class ArticleController {
   //POST
   @Post()
   @UseGuards(AuthGuard)
+  @UsePipes(new BackendValidationPipe())
   async create(
     @User() currentUser: UserEntity,
     @Body('article') createArticleDto: CreateArticleDto,
@@ -80,7 +81,7 @@ export class ArticleController {
   //PUT /api/articles/:slug
   @Put(':slug')
   @UseGuards(AuthGuard)
-  @UsePipes(new ValidationPipe()) //자동으로 요청 데이터의 유효성 검증
+  @UsePipes(new BackendValidationPipe()) //custom ValidationPipe
   async updateArticle(
     @User('id') currentUserId: number,
     @Param('slug') slug: string,

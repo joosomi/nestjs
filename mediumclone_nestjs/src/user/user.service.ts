@@ -21,16 +21,25 @@ export class UserService {
       where: { email: createUserDto.email },
     });
 
+    const errorResponse = {
+      errors: {},
+    };
+
     const userByUsername = await this.userRepository.findOne({
       where: { username: createUserDto.username },
     });
 
+    if (userByEmail) {
+      errorResponse.errors['email'] = 'has already been taken';
+    }
+
+    if (userByUsername) {
+      errorResponse.errors['username'] = 'has already been taken';
+    }
+
     //이미 존재하고 있는 이메일이나 username인 경우 422 error
     if (userByEmail || userByUsername) {
-      throw new HttpException(
-        'Email or username are taken',
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
+      throw new HttpException(errorResponse, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
     const newUser = new UserEntity();
@@ -44,6 +53,12 @@ export class UserService {
   }
 
   async login(loginUserDto: LoginUserDto): Promise<UserEntity> {
+    const errorResponse = {
+      errors: {
+        'email or password': 'is invalid',
+      },
+    };
+
     const user = await this.userRepository.findOne({
       where: {
         email: loginUserDto.email,
@@ -53,10 +68,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new HttpException(
-        'Credentials are not valid',
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
+      throw new HttpException(errorResponse, HttpStatus.UNPROCESSABLE_ENTITY);
     }
     //user를 먼저 check 하고 비밀번호를 check하는 순서가 바람직
     //bcrypt로 비밀번호 compare
@@ -66,10 +78,7 @@ export class UserService {
     );
 
     if (!isPasswordCorrect) {
-      throw new HttpException(
-        'Credentials are not valid',
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
+      throw new HttpException(errorResponse, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
     delete user.password; //password를 return 값에서 지움
