@@ -17,15 +17,16 @@ export class ArticleService {
     private readonly userRepository: Repository<UserEntity>,
   ) {}
 
-  //GET
+  //GET Articles
   async findAll(
     currentUserId: number,
     query: any,
   ): Promise<ArticlesResponseInterface> {
     const queryBuilder = this.articleRepository
       .createQueryBuilder('articles')
-      .leftJoinAndSelect('articles.author', 'author');
+      .leftJoinAndSelect('articles.author', 'author'); //articles와 author 테이블 JOIN
 
+    //tag - 해당 tag를 가진 article
     if (query.tag) {
       queryBuilder.andWhere('articles.tagList LIKE :tag', {
         tag: `%${query.tag}%`,
